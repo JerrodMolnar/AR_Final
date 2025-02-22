@@ -151,8 +151,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _examineScaleOffset: 1
-  _emissionColor: {r: 0.19607842, g: 0.72543657, b: 0.7490196, a: 1}
+  _rotationSpeed: 0.2
   _planeManager: {fileID: 0}
+  _emissionColor: {r: 0.19607842, g: 0.72543657, b: 0.7490196, a: 1}
 --- !u!1 &9045735957169684232
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 
 public class ItemBehavior : MonoBehaviour
@@ -14,61 +16,64 @@ public class ItemBehavior : MonoBehaviour
     private Vector2 _startTouch0, _startTouch1;
     private float _startDistance;
     private bool _isRotating = false;
+    private Button _examineButton;
     [SerializeField] private float _examineScaleOffset = 1f;
-    [SerializeField] private float _rotationSpeed = 0.5f;
-    [SerializeField] private ARPlaneManager _planeManager;
+    [SerializeField][Range(0.0f, 1f)] private float _rotationSpeed = 0.2f;
     [SerializeField] private Color _emissionColor = new Color(1.94339621f, 0.504182994f, 0.504182994f, 1);
 
     private void Start()
     {
         _material = GetComponentInChildren<MeshRenderer>().material;
         if (_material == null)
-            Debug.LogError("Original Material is null on ItemBehavior on " + name);
+            Debug.LogError("*** Original Material is null on ItemBehavior on " + name);
         else
         {
             _material.EnableKeyword("_EMISSION");
             _material.SetColor("_EmissionColor", _emissionColor);
             _material.DisableKeyword("_EMISSION");
         }
-
-        if (_planeManager == null)
+        
+        if (_examineTarget == null)
         {
             try
             {
-                _planeManager = GameObject.FindFirstObjectByType<ARPlaneManager>();
+                _examineTarget = GameObject.Find("*** Examine Point");
             }
             catch
             {
-                Debug.LogError("Plane manager is null on ItemBehavior on " + name);
+                Debug.LogError("*** Examine Target cannot be found on ItemBehavior on " + name);
             }
         }
-            if (_examineTarget == null)
+        _initialScale = transform.localScale;
+        if (_examineButton == null)
+        {
+            try
             {
-                try
-                {
-                    _examineTarget = GameObject.Find("Examine Point");
-                }
-                catch
-                {
-                    if (_examineTarget == null)
-                        Debug.LogError("Examine Target cannot be found on ItemBehavior on " + name);
-                }
+                _examineButton = GameObject.Find("ExamineButton").GetComponent<Button>();
+                _examineButton.gameObject.SetActive(false);
             }
-            _initialScale = transform.localScale;
+            catch (NullReferenceException e)
+            {
+                Debug.LogError("*** Examine button cannot be found on ItemBehavior on " + name);
+            }
         }
+    }
 
     private void OnEnable()
     {
-        GameManager.ViewPlanes(false);
+        ExamineEvent.Examine += ExamineObject;
+    }
+
+    private void OnDisable()
+    {
+        ExamineEvent.Examine -= ExamineObject;
     }
 
     private void Update()
     {
         SelectObject();
-        if (_isSelected && _selectedObject != null)
+        if (_isSelected)
         {
-            //ScaleObject();
-            //RotateObject();
             HandleScalingAndRotation();
         }
     }
@@ -95,14 +100,7 @@ public class ItemBehavior : MonoBehaviour
                         {
                             SetSelect(true);
                         }
-                        else if (_selectedObject == obj)
-                        {
-                            if (!_isExamined)
-                                ExamineObject();
-                            else
-                                UnexamineObject();
-                        }
-                        else
+                        else if (!_isExamined)
                         {
                             SetSelect(false);
                         }
@@ -119,6 +117,7 @@ public class ItemBehavior : MonoBehaviour
         {
             _isSelected = isSelected;
             _material.EnableKeyword("_EMISSION");
+            _examineButton.gameObject.SetActive(true);
             Debug.Log("*** Selecting");
         }
         else
@@ -126,11 +125,12 @@ public class ItemBehavior : MonoBehaviour
             _selectedObject = null;
             _isSelected = false;
             _material.DisableKeyword("_EMISSION");
-            UnexamineObject();
+            _examineButton.gameObject.SetActive(false);
             Debug.Log("*** Deselecting");
         }
     }
-    private void ExamineObject()
+
+    public void ExamineObject()
     {
         if (!_isExamined)
         {
@@ -142,11 +142,7 @@ public class ItemBehavior : MonoBehaviour
             _isExamined = true;
             Debug.Log("*** Examining");
         }
-    }
-
-    private void UnexamineObject()
-    {
-        if (_isExamined)
+        else
         {
             _selectedObject.transform.position = _originalTransform.position;
             _selectedObject.transform.localScale = _originalTransform.localScale;

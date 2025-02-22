@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.XR.ARFoundation;
@@ -16,7 +14,7 @@ public class GameManager : MonoBehaviour
         }
         catch
         {
-            Debug.LogError("Plane manager on GameManager is null");
+            Debug.LogError("*** Plane manager on GameManager is null");
         }
     }
 
@@ -26,6 +24,7 @@ public class GameManager : MonoBehaviour
         {
             plane.GetComponent<MeshRenderer>().enabled = isShowing;
         }
+        Debug.Log("*** View Planes Running");
     }
 
 
