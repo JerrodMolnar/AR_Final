@@ -1,5 +1,7 @@
 using System;
+using Unity.XR.CoreUtils;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 
@@ -16,47 +18,27 @@ public class ItemBehavior : MonoBehaviour
     private Vector2 _startTouch0, _startTouch1;
     private float _startDistance;
     private bool _isRotating = false;
-    private Button _examineButton;
     [SerializeField] private float _examineScaleOffset = 1f;
     [SerializeField][Range(0.0f, 1f)] private float _rotationSpeed = 0.2f;
     [SerializeField] private Color _emissionColor = new Color(1.94339621f, 0.504182994f, 0.504182994f, 1);
 
     private void Start()
     {
-        _material = GetComponentInChildren<MeshRenderer>().material;
+        _material = gameObject.transform.GetChild(0).GetComponent<MeshRenderer>().material;
         if (_material == null)
             Debug.LogError("*** Original Material is null on ItemBehavior on " + name);
-        else
-        {
-            _material.EnableKeyword("_EMISSION");
-            _material.SetColor("_EmissionColor", _emissionColor);
-            _material.DisableKeyword("_EMISSION");
-        }
         
-        if (_examineTarget == null)
+
+        try
         {
-            try
-            {
-                _examineTarget = GameObject.Find("*** Examine Point");
-            }
-            catch
-            {
-                Debug.LogError("*** Examine Target cannot be found on ItemBehavior on " + name);
-            }
+            _examineTarget = GameObject.Find("Examine Point");
         }
+        catch
+        {
+            Debug.LogError("*** Examine Target cannot be found on ItemBehavior on " + name);
+        }
+
         _initialScale = transform.localScale;
-        if (_examineButton == null)
-        {
-            try
-            {
-                _examineButton = GameObject.Find("ExamineButton").GetComponent<Button>();
-                _examineButton.gameObject.SetActive(false);
-            }
-            catch (NullReferenceException e)
-            {
-                Debug.LogError("*** Examine button cannot be found on ItemBehavior on " + name);
-            }
-        }
     }
 
     private void OnEnable()
@@ -71,7 +53,9 @@ public class ItemBehavior : MonoBehaviour
 
     private void Update()
     {
-        SelectObject();
+        if (Input.touchCount == 1)
+            SelectObject();
+
         if (_isSelected)
         {
             HandleScalingAndRotation();
@@ -80,32 +64,29 @@ public class ItemBehavior : MonoBehaviour
 
     private void SelectObject()
     {
-        if (Input.touchCount == 1)
-        {
-            Touch touch = Input.GetTouch(0);
+        Touch touch = Input.GetTouch(0);
 
-            if (touch.phase == TouchPhase.Began)
+        if (EventSystem.current.IsPointerOverGameObject(touch.fingerId))
+            return; // Stop raycast if touching UI
+
+        if (touch.phase == TouchPhase.Began)
+        {
+            Ray ray = Camera.main.ScreenPointToRay(touch.position);
+            if (Physics.Raycast(ray, out RaycastHit hit))
             {
-                Ray ray = Camera.main.ScreenPointToRay(touch.position);
-                if (Physics.Raycast(ray, out RaycastHit hit))
+                GameObject obj = hit.collider.gameObject;
+                if (obj.CompareTag("Placeable"))
                 {
-                    GameObject obj = hit.collider.gameObject;
-                    if (obj.CompareTag("Placeable"))
+                    if (!_isSelected)
                     {
-                        if (_selectedObject == null)
-                        {
-                            _selectedObject = obj;
-                        }
-                        if (!_isSelected)
-                        {
-                            SetSelect(true);
-                        }
-                        else if (!_isExamined)
-                        {
-                            SetSelect(false);
-                        }
-                        Debug.Log("*** Touched Placeable");
+                        _selectedObject = obj;
+                        SetSelect(true);
                     }
+                    else if (!_isExamined)
+                    {
+                        SetSelect(false);
+                    }
+                    Debug.Log("*** Touched Placeable");
                 }
             }
         }
@@ -115,9 +96,14 @@ public class ItemBehavior : MonoBehaviour
     {
         if (isSelected)
         {
+            
             _isSelected = isSelected;
             _material.EnableKeyword("_EMISSION");
-            _examineButton.gameObject.SetActive(true);
+            if (_material.GetColor("_EmissionColor") != _emissionColor)
+            {
+                _material.SetColor("_EmissionColor", _emissionColor);
+            }
+            ExamineEvent.examineButton.gameObject.SetActive(true);
             Debug.Log("*** Selecting");
         }
         else
@@ -125,20 +111,28 @@ public class ItemBehavior : MonoBehaviour
             _selectedObject = null;
             _isSelected = false;
             _material.DisableKeyword("_EMISSION");
-            _examineButton.gameObject.SetActive(false);
-            Debug.Log("*** Deselecting");
+            ExamineEvent.examineButton.gameObject.SetActive(false);
+            Debug.Log("*** Deselecting " + ExamineEvent.examineButton.name);
         }
     }
 
     public void ExamineObject()
     {
-        if (!_isExamined)
+        if (!_isExamined && _isSelected)
         {
-            //Parent to target
-            _originalTransform = _selectedObject.transform;
-            _selectedObject.transform.parent = _examineTarget.transform;
-            _selectedObject.transform.localPosition = Vector3.zero;
-            _selectedObject.transform.localScale = _initialScale * _examineScaleOffset;
+            try
+            {
+                //Parent to target
+                _originalTransform = _selectedObject.transform;
+                _selectedObject.transform.parent = _examineTarget.transform;
+                _selectedObject.transform.localPosition = Vector3.zero;
+                _selectedObject.transform.localScale = _initialScale * _examineScaleOffset;
+            }
+            catch (NullReferenceException e)
+            {
+
+                Debug.LogError("***** " + e.Message + " " + e.StackTrace);
+            }
             _isExamined = true;
             Debug.Log("*** Examining");
         }
@@ -156,6 +150,7 @@ public class ItemBehavior : MonoBehaviour
 
     private void HandleScalingAndRotation()
     {
+        Vector3 scaleNow = Vector3.one;
         if (Input.touchCount == 2)
         {
             Touch touch1 = Input.GetTouch(0);
@@ -165,13 +160,14 @@ public class ItemBehavior : MonoBehaviour
                 _startTouch0 = touch1.position;
                 _startTouch1 = touch2.position;
                 _startDistance = Vector2.Distance(_startTouch0, _startTouch1);
+                scaleNow = _selectedObject.transform.localScale;
                 _isRotating = false;
             }
             else
             {
                 float newDistance = Vector2.Distance(touch1.position, touch2.position);
                 float scaleFactor = newDistance / _startDistance;
-                Vector3 newScale = _initialScale * scaleFactor;
+                Vector3 newScale = scaleNow * scaleFactor;
 
                 // Define your min and max scale limits
                 float minScale = 0.5f; // Minimum scale limit

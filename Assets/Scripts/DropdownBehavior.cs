@@ -26,7 +26,7 @@ public class DropdownBehavior : MonoBehaviour
                 Debug.LogError("*** Cannot find Placement Interactor on DropdownBehavior Script on " + name);
             }
         }
-        if (_placementPrefabs.Length + 1 != _dropdown.options.Count)
+        if (_placementPrefabs.Length != _dropdown.options.Count - 1)
         {
             Debug.LogError("*** Prefabs or options not enough on DropdownBehavior script on " + name);
         }
@@ -34,19 +34,27 @@ public class DropdownBehavior : MonoBehaviour
 
     private void OnDropdownValueChanged(int index)
     {
-        int indexForArray = index + 1;
-        GameObject[] activePlaceables = GameObject.FindGameObjectsWithTag("Placeable");
-        foreach (GameObject gameObject in activePlaceables)
+        if (index == 0)
         {
-            if (_placementPrefabs[indexForArray].name == gameObject.name)
-            {
-                ResetValue();
-                return;
-            }
+            GameManager.ViewPlanes(false);
         }
-        _PlacementInteractor.placementPrefab = _placementPrefabs[indexForArray];
-        Debug.Log("*** " + _placementPrefabs[indexForArray].name + " selected");
-        GameManager.ViewPlanes(true);
+        else
+        {
+            int indexForArray = index - 1;
+            GameObject[] activePlaceables = GameObject.FindGameObjectsWithTag("Placeable");
+            foreach (GameObject gameObject in activePlaceables)
+            {
+                if (gameObject.activeInHierarchy && _placementPrefabs[indexForArray].name + "(Clone)" == gameObject.name)
+                {
+                    ResetValue();
+                    return;
+                }
+            }
+            _PlacementInteractor.gameObject.SetActive(true);
+            _PlacementInteractor.placementPrefab = _placementPrefabs[indexForArray];
+            Debug.Log("*** " + _placementPrefabs[indexForArray].name + " selected");
+            GameManager.ViewPlanes(true);
+        }
     }
 
     public void ResetValue()

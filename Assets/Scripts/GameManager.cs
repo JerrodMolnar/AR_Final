@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     {
         try
         {
-            _planeManager = GameObject.FindFirstObjectByType<ARPlaneManager>();
+            _planeManager = FindFirstObjectByType<ARPlaneManager>();
         }
         catch
         {
@@ -20,10 +20,7 @@ public class GameManager : MonoBehaviour
 
     public static void ViewPlanes(bool isShowing)
     {
-        foreach (var plane in _planeManager.trackables)
-        {
-            plane.GetComponent<MeshRenderer>().enabled = isShowing;
-        }
+        _planeManager.SetTrackablesActive(isShowing);      
         Debug.Log("*** View Planes Running");
     }
 
