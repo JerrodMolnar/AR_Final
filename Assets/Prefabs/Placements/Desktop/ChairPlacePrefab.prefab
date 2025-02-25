@@ -150,9 +150,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2942c3ba44a19a4281a374abb25d197, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _examineScaleOffset: 1
+  _examineScaleOffset: 0.75
   _rotationSpeed: 0.2
-  _planeManager: {fileID: 0}
   _emissionColor: {r: 0.19607842, g: 0.72543657, b: 0.7490196, a: 1}
 --- !u!1 &9045735957169684232
 GameObject:

@@ -46,11 +46,12 @@ public class DropdownBehavior : MonoBehaviour
             {
                 if (gameObject.activeInHierarchy && _placementPrefabs[indexForArray].name + "(Clone)" == gameObject.name)
                 {
+                    Debug.Log(gameObject.name + " == " + _placementPrefabs[indexForArray].name + " and is active = " + gameObject.activeInHierarchy);
                     ResetValue();
                     return;
                 }
             }
-            _PlacementInteractor.gameObject.SetActive(true);
+            _PlacementInteractor.enabled = true;
             _PlacementInteractor.placementPrefab = _placementPrefabs[indexForArray];
             Debug.Log("*** " + _placementPrefabs[indexForArray].name + " selected");
             GameManager.ViewPlanes(true);

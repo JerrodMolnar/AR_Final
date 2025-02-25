@@ -53,7 +53,7 @@ public class ItemBehavior : MonoBehaviour
 
     private void Update()
     {
-        if (Input.touchCount == 1)
+        if (Input.touchCount < 2 && Input.touchCount > 0)
             SelectObject();
 
         if (_isSelected)
@@ -65,9 +65,6 @@ public class ItemBehavior : MonoBehaviour
     private void SelectObject()
     {
         Touch touch = Input.GetTouch(0);
-
-        if (EventSystem.current.IsPointerOverGameObject(touch.fingerId))
-            return; // Stop raycast if touching UI
 
         if (touch.phase == TouchPhase.Began)
         {
@@ -124,14 +121,24 @@ public class ItemBehavior : MonoBehaviour
             {
                 //Parent to target
                 _originalTransform = _selectedObject.transform;
+                _originalTransform.position = _selectedObject.transform.position;
+                _originalTransform.rotation = _selectedObject.transform.localRotation;
+                _originalTransform.localScale = _selectedObject.transform.localScale;
                 _selectedObject.transform.parent = _examineTarget.transform;
                 _selectedObject.transform.localPosition = Vector3.zero;
                 _selectedObject.transform.localScale = _initialScale * _examineScaleOffset;
             }
             catch (NullReferenceException e)
             {
-
-                Debug.LogError("***** " + e.Message + " " + e.StackTrace);
+                if (_originalTransform == null)
+                {
+                    Debug.LogError("*** Original transform on ItemBehavior is null on " + name);
+                }
+                if (_selectedObject == null)
+                {
+                    Debug.LogError("*** Selected object on ItemBehavior is null on " + name);
+                }
+                Debug.LogError("***** " + e.Message + " \n" + e.StackTrace);
             }
             _isExamined = true;
             Debug.Log("*** Examining");
@@ -174,9 +181,9 @@ public class ItemBehavior : MonoBehaviour
                 float maxScale = 2.0f; // Maximum scale limit
 
                 // Clamp each axis of the scale
-                newScale.x = Mathf.Clamp(_initialScale.x, minScale, maxScale);
-                newScale.y = Mathf.Clamp(_initialScale.y, minScale, maxScale);
-                newScale.z = Mathf.Clamp(_initialScale.z, minScale, maxScale);
+                newScale.x = Mathf.Clamp(newScale.x, minScale, maxScale);
+                newScale.y = Mathf.Clamp(newScale.y, minScale, maxScale);
+                newScale.z = Mathf.Clamp(newScale.z, minScale, maxScale);
 
                 _selectedObject.transform.localScale = newScale;
 
