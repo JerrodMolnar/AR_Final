@@ -67,7 +67,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2942c3ba44a19a4281a374abb25d197, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _scaleOffset: 1
+  _examineScaleOffset: 1
+  _rotationSpeed: 0.1
   _emissionColor: {r: 1.9433962, g: 0.504183, b: 0.504183, a: 1}
 --- !u!1 &8582508085658832752
 GameObject:

@@ -11,6 +11,7 @@ public class GameManager : MonoBehaviour
         try
         {
             _planeManager = FindFirstObjectByType<ARPlaneManager>();
+            ViewPlanes(false);
         }
         catch
         {
@@ -20,7 +21,9 @@ public class GameManager : MonoBehaviour
 
     public static void ViewPlanes(bool isShowing)
     {
-        _planeManager.SetTrackablesActive(isShowing);      
+        _planeManager.SetTrackablesActive(isShowing);
+        _planeManager.enabled = isShowing;
+
         Debug.Log("*** View Planes Running");
     }
 

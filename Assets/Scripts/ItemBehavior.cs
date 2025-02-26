@@ -10,8 +10,8 @@ public class ItemBehavior : MonoBehaviour
     private Material _material;
     private Transform _originalTransform;
     private GameObject _selectedObject;
-    private bool _isSelected;
-    private bool _isExamined;
+    public static bool isSelected;
+    public static bool isExamined;
     private GameObject _examineTarget;
     private Vector3 _initialScale;
     private float _rotationThreshold = 10f;
@@ -27,7 +27,7 @@ public class ItemBehavior : MonoBehaviour
         _material = gameObject.transform.GetChild(0).GetComponent<MeshRenderer>().material;
         if (_material == null)
             Debug.LogError("*** Original Material is null on ItemBehavior on " + name);
-        
+
 
         try
         {
@@ -44,11 +44,13 @@ public class ItemBehavior : MonoBehaviour
     private void OnEnable()
     {
         ExamineEvent.Examine += ExamineObject;
+        SelectionExitButtonBehavior.ExitSelection += SetSelect;
     }
 
     private void OnDisable()
     {
         ExamineEvent.Examine -= ExamineObject;
+        SelectionExitButtonBehavior.ExitSelection -= SetSelect;
     }
 
     private void Update()
@@ -56,7 +58,7 @@ public class ItemBehavior : MonoBehaviour
         if (Input.touchCount < 2 && Input.touchCount > 0)
             SelectObject();
 
-        if (_isSelected)
+        if (isSelected)
         {
             HandleScalingAndRotation();
         }
@@ -74,16 +76,12 @@ public class ItemBehavior : MonoBehaviour
                 GameObject obj = hit.collider.gameObject;
                 if (obj.CompareTag("Placeable"))
                 {
-                    if (!_isSelected)
+                    if (!isSelected)
                     {
                         _selectedObject = obj;
                         SetSelect(true);
+                        SelectionExitButtonBehavior.EnableButton();
                     }
-                    else if (!_isExamined)
-                    {
-                        SetSelect(false);
-                    }
-                    Debug.Log("*** Touched Placeable");
                 }
             }
         }
@@ -93,8 +91,8 @@ public class ItemBehavior : MonoBehaviour
     {
         if (isSelected)
         {
-            
-            _isSelected = isSelected;
+
+            ItemBehavior.isSelected = isSelected;
             _material.EnableKeyword("_EMISSION");
             if (_material.GetColor("_EmissionColor") != _emissionColor)
             {
@@ -106,8 +104,9 @@ public class ItemBehavior : MonoBehaviour
         else
         {
             _selectedObject = null;
-            _isSelected = false;
+            ItemBehavior.isSelected = false;
             _material.DisableKeyword("_EMISSION");
+            isExamined = false;
             ExamineEvent.examineButton.gameObject.SetActive(false);
             Debug.Log("*** Deselecting " + ExamineEvent.examineButton.name);
         }
@@ -115,7 +114,7 @@ public class ItemBehavior : MonoBehaviour
 
     public void ExamineObject()
     {
-        if (!_isExamined && _isSelected)
+        if (!isExamined && isSelected)
         {
             try
             {
@@ -140,7 +139,7 @@ public class ItemBehavior : MonoBehaviour
                 }
                 Debug.LogError("***** " + e.Message + " \n" + e.StackTrace);
             }
-            _isExamined = true;
+            isExamined = true;
             Debug.Log("*** Examining");
         }
         else
@@ -150,7 +149,7 @@ public class ItemBehavior : MonoBehaviour
             _selectedObject.transform.rotation = _originalTransform.rotation;
             _selectedObject.transform.parent = null;
             _originalTransform = null;
-            _isExamined = false;
+            isExamined = false;
             Debug.Log("*** Unexamining");
         }
     }
@@ -176,9 +175,8 @@ public class ItemBehavior : MonoBehaviour
                 float scaleFactor = newDistance / _startDistance;
                 Vector3 newScale = scaleNow * scaleFactor;
 
-                // Define your min and max scale limits
-                float minScale = 0.5f; // Minimum scale limit
-                float maxScale = 2.0f; // Maximum scale limit
+                float minScale = 0.5f;
+                float maxScale = 2.0f;
 
                 // Clamp each axis of the scale
                 newScale.x = Mathf.Clamp(newScale.x, minScale, maxScale);

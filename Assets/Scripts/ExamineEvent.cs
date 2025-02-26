@@ -6,6 +6,8 @@ public class ExamineEvent : MonoBehaviour
 
     public delegate void ExamineButton();
     public static event ExamineButton Examine;
+    [SerializeField] private Color ExaminedColor;
+    [SerializeField] private Color UnexaminedColor;
 
     public static Button examineButton;
 
@@ -24,11 +26,21 @@ public class ExamineEvent : MonoBehaviour
 
     public void ButtonClick()
     {
-        Debug.Log("*** Button Click Triggered!");
         if (Examine != null)
-        {
             Examine();
-            Debug.Log("*** Examine Event Triggered!");
+        Debug.Log("*** Examine Event Triggered!");
+
+        if (ItemBehavior.isSelected && !ItemBehavior.isExamined)
+        {
+            ColorBlock cb = examineButton.colors;
+            cb.normalColor = ExaminedColor;
+            examineButton.colors = cb;
+        }
+        else if (ItemBehavior.isSelected && ItemBehavior.isExamined)
+        {
+            ColorBlock cb = examineButton.colors;
+            cb.normalColor = UnexaminedColor;
+            examineButton.colors = cb;
         }
     }
 }
