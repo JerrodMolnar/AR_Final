@@ -54,6 +54,7 @@ public class DropdownBehavior : MonoBehaviour
             _PlacementInteractor.enabled = true;
             _PlacementInteractor.placementPrefab = _placementPrefabs[indexForArray];
             GameManager.ViewPlanes(true);
+            SelectionExitButtonBehavior.ButtonClick();
         }
     }
 

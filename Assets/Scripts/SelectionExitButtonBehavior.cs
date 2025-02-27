@@ -18,7 +18,7 @@ public class SelectionExitButtonBehavior : MonoBehaviour
         this.gameObject.SetActive(false);
     }
 
-    public void ButtonClick()
+    public static void ButtonClick()
     {
         ExitSelection?.Invoke(false);
         Debug.Log("******* Exit Selection Button Click");

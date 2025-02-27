@@ -8,6 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Desktop.unity
     guid: 99c9720ab356a0642a771bea13969a05
+  - enabled: 1
+    path: Assets/Scenes/Driveway.unity
+    guid: 0cbd0cbf232ddc84ca46bb470c70f4d2
   m_configObjects:
     UnityEditor.XR.ARCore.ARCoreSettings: {fileID: 11400000, guid: a65787c6aba1acf4ba7f336b2b54ccc7,
       type: 2}

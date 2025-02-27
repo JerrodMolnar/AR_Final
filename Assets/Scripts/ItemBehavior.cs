@@ -1,10 +1,7 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem.EnhancedTouch;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
-using Touch = UnityEngine.Touch;
 
 public class ItemBehavior : MonoBehaviour
 {
@@ -29,6 +26,9 @@ public class ItemBehavior : MonoBehaviour
 
     private ARRaycastManager _raycastManager;
     private List<ARRaycastHit> hits = new List<ARRaycastHit>();
+    private Vector2 _lastTouchPosition;
+    private bool _isRotating;
+    private float _rotationSpeed;
 
     private void Start()
     {
@@ -81,10 +81,15 @@ public class ItemBehavior : MonoBehaviour
     {
         if (Input.touchCount == 1 && !isSelected)
             SelectObject();
+        else
+        {
+            if (isExamined)
+                HandleExamineRotation();
+        }
 
         if (isSelected)
         {
-            HandleMoveAndRotation();
+            HandleMoveAndScale();
         }
     }
 
@@ -115,10 +120,7 @@ public class ItemBehavior : MonoBehaviour
         if (isSelected)
         {
             ItemBehavior.isSelected = isSelected;
-            if (_material.GetColor("_EmissionColor") != _emissionColor)
-            {
-                _material.SetColor("_EmissionColor", _emissionColor);
-            }
+            _material.SetColor("_EmissionColor", _emissionColor);
             ExamineEvent.examineButton.gameObject.SetActive(isSelected);
             ExamineEvent.ChangeColor(isSelected);
             SelectionExitButtonBehavior.EnableButton();
@@ -167,7 +169,7 @@ public class ItemBehavior : MonoBehaviour
         }
     }
 
-    private void HandleMoveAndRotation()
+    private void HandleMoveAndScale()
     {
         Vector3 scaleNow = Vector3.one;
         if (Input.touchCount == 1)
@@ -177,11 +179,11 @@ public class ItemBehavior : MonoBehaviour
             {
                 case TouchPhase.Began:
                     startTouchPosition = touch.position;
-                    isDragging = _selectedObject != null;
+                    isDragging = true;
                     break;
 
                 case TouchPhase.Moved:
-                    if (isDragging && _selectedObject != null)
+                    if (isDragging)
                     {
                         currentTouchPosition = touch.position;
                         if (_raycastManager.Raycast(touch.position, hits, TrackableType.PlaneWithinPolygon))
@@ -222,6 +224,27 @@ public class ItemBehavior : MonoBehaviour
 
                 _selectedObject.transform.localScale = newScale;
             }
+        }
+    }
+
+    private void HandleExamineRotation()
+    {
+        Touch touch = Input.GetTouch(0);
+        if (touch.phase == TouchPhase.Began)
+        {
+            _lastTouchPosition = touch.position;
+            _isRotating = true;
+        }
+        else if (touch.phase == TouchPhase.Moved && _isRotating)
+        {
+            Vector2 delta = touch.position - _lastTouchPosition;
+            _selectedObject.transform.Rotate(Vector3.up, -delta.x * _rotationSpeed, Space.World);
+            _lastTouchPosition = touch.position;
+        }
+
+        else if (touch.phase == TouchPhase.Ended)
+        {
+            _isRotating = false;
         }
     }
 }
