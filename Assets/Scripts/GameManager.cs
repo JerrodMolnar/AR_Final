@@ -23,8 +23,6 @@ public class GameManager : MonoBehaviour
     {
         _planeManager.SetTrackablesActive(isShowing);
         _planeManager.enabled = isShowing;
-
-        Debug.Log("*** View Planes Running");
     }
 
 
@@ -32,6 +30,4 @@ public class GameManager : MonoBehaviour
     {
         SceneManager.LoadScene(sceneId);
     }
-
-
 }

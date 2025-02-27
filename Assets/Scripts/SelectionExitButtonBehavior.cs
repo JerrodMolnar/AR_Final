@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,6 +21,8 @@ public class SelectionExitButtonBehavior : MonoBehaviour
     public void ButtonClick()
     {
         ExitSelection?.Invoke(false);
+        Debug.Log("******* Exit Selection Button Click");
+        exitSelectButton.gameObject.SetActive(false);
     }
 
     public static void EnableButton()

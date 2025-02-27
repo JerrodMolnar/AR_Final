@@ -46,14 +46,13 @@ public class DropdownBehavior : MonoBehaviour
             {
                 if (gameObject.activeInHierarchy && _placementPrefabs[indexForArray].name + "(Clone)" == gameObject.name)
                 {
-                    Debug.Log(gameObject.name + " == " + _placementPrefabs[indexForArray].name + " and is active = " + gameObject.activeInHierarchy);
+                    Debug.Log("*** " + gameObject.name + " == " + _placementPrefabs[indexForArray].name + " and is active = " + gameObject.activeInHierarchy);
                     ResetValue();
                     return;
                 }
             }
             _PlacementInteractor.enabled = true;
             _PlacementInteractor.placementPrefab = _placementPrefabs[indexForArray];
-            Debug.Log("*** " + _placementPrefabs[indexForArray].name + " selected");
             GameManager.ViewPlanes(true);
         }
     }
@@ -63,6 +62,5 @@ public class DropdownBehavior : MonoBehaviour
         _dropdown.value = 0;
         _dropdown.RefreshShownValue();
         GameManager.ViewPlanes(false);
-        Debug.Log("*** Last value reset");
     }
 }

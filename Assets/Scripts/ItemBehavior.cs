@@ -1,33 +1,38 @@
 using System;
-using Unity.XR.CoreUtils;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
-using UnityEngine.XR.ARFoundation;
 
 public class ItemBehavior : MonoBehaviour
 {
     private Material _material;
-    private Transform _originalTransform;
-    private GameObject _selectedObject;
-    public static bool isSelected;
-    public static bool isExamined;
+    private Vector3 _originalPosition;
+    private Vector3 _originalScale;
+    private Quaternion _originalRotation;
     private GameObject _examineTarget;
+    private GameObject _placementParent;
     private Vector3 _initialScale;
-    private float _rotationThreshold = 10f;
     private Vector2 _startTouch0, _startTouch1;
     private float _startDistance;
+    private Vector2 _lastTouchPosition;
     private bool _isRotating = false;
     [SerializeField] private float _examineScaleOffset = 1f;
     [SerializeField][Range(0.0f, 1f)] private float _rotationSpeed = 0.2f;
     [SerializeField] private Color _emissionColor = new Color(1.94339621f, 0.504182994f, 0.504182994f, 1);
 
+    private static GameObject _selectedObject;
+    public static bool isSelected;
+    public static bool isExamined;
+
     private void Start()
     {
+        _placementParent = GameObject.Find("Placed GameObjects");
+        if (_placementParent == null)
+            Debug.LogError("Placement parent on ItemBehavior is null");
+        else
+            transform.parent = _placementParent.transform;
+
         _material = gameObject.transform.GetChild(0).GetComponent<MeshRenderer>().material;
         if (_material == null)
             Debug.LogError("*** Original Material is null on ItemBehavior on " + name);
-
 
         try
         {
@@ -55,7 +60,7 @@ public class ItemBehavior : MonoBehaviour
 
     private void Update()
     {
-        if (Input.touchCount < 2 && Input.touchCount > 0)
+        if (Input.touchCount == 1 && !isSelected)
             SelectObject();
 
         if (isSelected)
@@ -80,7 +85,6 @@ public class ItemBehavior : MonoBehaviour
                     {
                         _selectedObject = obj;
                         SetSelect(true);
-                        SelectionExitButtonBehavior.EnableButton();
                     }
                 }
             }
@@ -91,24 +95,31 @@ public class ItemBehavior : MonoBehaviour
     {
         if (isSelected)
         {
-
             ItemBehavior.isSelected = isSelected;
             _material.EnableKeyword("_EMISSION");
+            _material.SetFloat("_EmissionEnabled", 1.0f);
             if (_material.GetColor("_EmissionColor") != _emissionColor)
             {
                 _material.SetColor("_EmissionColor", _emissionColor);
             }
-            ExamineEvent.examineButton.gameObject.SetActive(true);
+            ExamineEvent.examineButton.gameObject.SetActive(isSelected);
+            ExamineEvent.ChangeColor(isSelected);
+            SelectionExitButtonBehavior.EnableButton();
             Debug.Log("*** Selecting");
         }
         else
         {
             _selectedObject = null;
-            ItemBehavior.isSelected = false;
+            if (isExamined)
+            {
+                isExamined = isSelected;
+                ExamineObject();
+            }
+            ExamineEvent.examineButton.gameObject.SetActive(isSelected);
+            _material.SetColor("_EmissionColor", Color.black);
+            ItemBehavior.isSelected = isSelected;
             _material.DisableKeyword("_EMISSION");
-            isExamined = false;
-            ExamineEvent.examineButton.gameObject.SetActive(false);
-            Debug.Log("*** Deselecting " + ExamineEvent.examineButton.name);
+            Debug.Log("*** Deselecting ");
         }
     }
 
@@ -118,38 +129,34 @@ public class ItemBehavior : MonoBehaviour
         {
             try
             {
-                //Parent to target
-                _originalTransform = _selectedObject.transform;
-                _originalTransform.position = _selectedObject.transform.position;
-                _originalTransform.rotation = _selectedObject.transform.localRotation;
-                _originalTransform.localScale = _selectedObject.transform.localScale;
+                _originalPosition = _selectedObject.transform.position;
+                _originalRotation = _selectedObject.transform.rotation;
+                _originalScale = _selectedObject.transform.localScale;
                 _selectedObject.transform.parent = _examineTarget.transform;
                 _selectedObject.transform.localPosition = Vector3.zero;
                 _selectedObject.transform.localScale = _initialScale * _examineScaleOffset;
             }
-            catch (NullReferenceException e)
+            catch (Exception e)
             {
-                if (_originalTransform == null)
-                {
-                    Debug.LogError("*** Original transform on ItemBehavior is null on " + name);
-                }
-                if (_selectedObject == null)
-                {
-                    Debug.LogError("*** Selected object on ItemBehavior is null on " + name);
-                }
-                Debug.LogError("***** " + e.Message + " \n" + e.StackTrace);
+                Debug.LogError("***** " + e.Source + "\n" + e.Message + " \n" + e.StackTrace);
             }
+            ExamineEvent.ChangeColor(false);
             isExamined = true;
             Debug.Log("*** Examining");
         }
         else
         {
-            _selectedObject.transform.position = _originalTransform.position;
-            _selectedObject.transform.localScale = _originalTransform.localScale;
-            _selectedObject.transform.rotation = _originalTransform.rotation;
-            _selectedObject.transform.parent = null;
-            _originalTransform = null;
+            GameManager.ViewPlanes(true);
+            _selectedObject.transform.position = _originalPosition;
+            _selectedObject.transform.localScale = _originalScale;
+            _selectedObject.transform.rotation = _originalRotation;
+            _selectedObject.transform.parent = _placementParent.transform;
+            GameManager.ViewPlanes(false);
+            _originalPosition = Vector3.zero;
+            _originalRotation = Quaternion.identity;
+            _originalScale = Vector3.zero;
             isExamined = false;
+            ExamineEvent.ChangeColor(true);
             Debug.Log("*** Unexamining");
         }
     }
@@ -157,6 +164,27 @@ public class ItemBehavior : MonoBehaviour
     private void HandleScalingAndRotation()
     {
         Vector3 scaleNow = Vector3.one;
+
+        if (Input.touchCount == 1)
+        {
+            Touch touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Began)
+            {
+                _lastTouchPosition = touch.position;
+                _isRotating = true;
+            }
+            else if (touch.phase == TouchPhase.Moved && _isRotating)
+            {
+                Vector2 delta = touch.position - _lastTouchPosition;
+                _selectedObject.transform.Rotate(Vector3.up, -delta.x * _rotationSpeed, Space.World);
+                _lastTouchPosition = touch.position;
+            }
+            else if (touch.phase == TouchPhase.Ended)
+            {
+                _isRotating = false;
+            }
+        }
+
         if (Input.touchCount == 2)
         {
             Touch touch1 = Input.GetTouch(0);
@@ -167,39 +195,20 @@ public class ItemBehavior : MonoBehaviour
                 _startTouch1 = touch2.position;
                 _startDistance = Vector2.Distance(_startTouch0, _startTouch1);
                 scaleNow = _selectedObject.transform.localScale;
-                _isRotating = false;
             }
             else
             {
                 float newDistance = Vector2.Distance(touch1.position, touch2.position);
                 float scaleFactor = newDistance / _startDistance;
-                Vector3 newScale = scaleNow * scaleFactor;
-
                 float minScale = 0.5f;
                 float maxScale = 2.0f;
-
-                // Clamp each axis of the scale
+                Vector3 newScale = scaleNow * scaleFactor;
                 newScale.x = Mathf.Clamp(newScale.x, minScale, maxScale);
                 newScale.y = Mathf.Clamp(newScale.y, minScale, maxScale);
                 newScale.z = Mathf.Clamp(newScale.z, minScale, maxScale);
 
                 _selectedObject.transform.localScale = newScale;
-
-                // Rotation: Check if fingers are twisting
-                Vector2 currentDir = (touch2.position - touch1.position).normalized;
-                Vector2 startDir = (_startTouch1 - _startTouch0).normalized;
-                float angle = Vector2.SignedAngle(startDir, currentDir) * _rotationSpeed;
-
-                if (Mathf.Abs(angle) > _rotationThreshold)  // Threshold to avoid unwanted rotation
-                {
-                    _selectedObject.transform.Rotate(Vector3.up, angle);
-                    _isRotating = true;
-                }
             }
-        }
-        else if (_isRotating)
-        {
-            _isRotating = false;
         }
     }
 }
