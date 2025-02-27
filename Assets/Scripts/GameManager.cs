@@ -11,7 +11,6 @@ public class GameManager : MonoBehaviour
         try
         {
             _planeManager = FindFirstObjectByType<ARPlaneManager>();
-            ViewPlanes(false);
         }
         catch
         {

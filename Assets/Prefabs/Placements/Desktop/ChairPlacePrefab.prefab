@@ -151,5 +151,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _examineScaleOffset: 0.75
-  _rotationSpeed: 0.5
   _emissionColor: {r: 0.19607842, g: 0.72543657, b: 0.7490196, a: 1}

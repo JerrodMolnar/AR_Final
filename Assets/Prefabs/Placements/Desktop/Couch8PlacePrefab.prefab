@@ -67,8 +67,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2942c3ba44a19a4281a374abb25d197, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _examineScaleOffset: 1
-  _rotationSpeed: 0.5
+  _examineScaleOffset: 0.75
   _emissionColor: {r: 0.19607842, g: 0.72543657, b: 0.7490196, a: 1}
 --- !u!1 &7250689632145825238
 GameObject:
@@ -96,13 +95,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7250689632145825238}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: -0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7941460453238260254}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!33 &1919626667746118311
 MeshFilter:
   m_ObjectHideFlags: 0

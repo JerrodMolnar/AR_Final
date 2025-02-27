@@ -40,6 +40,7 @@ public class ExamineEvent : MonoBehaviour
             ColorBlock cb = examineButton.colors;
             cb.normalColor = _examinedColor;
             examineButton.colors = cb;
+            Debug.Log("Button Colors: " + examineButton.colors);
         }
         else
         {

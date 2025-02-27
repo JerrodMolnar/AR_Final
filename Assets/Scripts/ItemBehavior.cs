@@ -1,5 +1,10 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem.EnhancedTouch;
+using UnityEngine.XR.ARFoundation;
+using UnityEngine.XR.ARSubsystems;
+using Touch = UnityEngine.Touch;
 
 public class ItemBehavior : MonoBehaviour
 {
@@ -12,15 +17,18 @@ public class ItemBehavior : MonoBehaviour
     private Vector3 _initialScale;
     private Vector2 _startTouch0, _startTouch1;
     private float _startDistance;
-    private Vector2 _lastTouchPosition;
-    private bool _isRotating = false;
     [SerializeField] private float _examineScaleOffset = 1f;
-    [SerializeField][Range(0.0f, 1f)] private float _rotationSpeed = 0.2f;
     [SerializeField] private Color _emissionColor = new Color(1.94339621f, 0.504182994f, 0.504182994f, 1);
+    private Vector2 startTouchPosition;
+    private Vector2 currentTouchPosition;
+    private bool isDragging = false;
 
     private static GameObject _selectedObject;
     public static bool isSelected;
     public static bool isExamined;
+
+    private ARRaycastManager _raycastManager;
+    private List<ARRaycastHit> hits = new List<ARRaycastHit>();
 
     private void Start()
     {
@@ -33,6 +41,8 @@ public class ItemBehavior : MonoBehaviour
         _material = gameObject.transform.GetChild(0).GetComponent<MeshRenderer>().material;
         if (_material == null)
             Debug.LogError("*** Original Material is null on ItemBehavior on " + name);
+        else if (!_material.IsKeywordEnabled("_EMISSION"))
+            _material.EnableKeyword("_EMISSION");
 
         try
         {
@@ -41,6 +51,15 @@ public class ItemBehavior : MonoBehaviour
         catch
         {
             Debug.LogError("*** Examine Target cannot be found on ItemBehavior on " + name);
+        }
+
+        try
+        {
+            _raycastManager = GameObject.FindFirstObjectByType<ARRaycastManager>();
+        }
+        catch
+        {
+            Debug.LogError("AR Raycast Manager is null on ItemBehavior on " + name);
         }
 
         _initialScale = transform.localScale;
@@ -65,7 +84,7 @@ public class ItemBehavior : MonoBehaviour
 
         if (isSelected)
         {
-            HandleScalingAndRotation();
+            HandleMoveAndRotation();
         }
     }
 
@@ -81,7 +100,7 @@ public class ItemBehavior : MonoBehaviour
                 GameObject obj = hit.collider.gameObject;
                 if (obj.CompareTag("Placeable"))
                 {
-                    if (!isSelected)
+                    if (obj != _selectedObject)
                     {
                         _selectedObject = obj;
                         SetSelect(true);
@@ -96,8 +115,6 @@ public class ItemBehavior : MonoBehaviour
         if (isSelected)
         {
             ItemBehavior.isSelected = isSelected;
-            _material.EnableKeyword("_EMISSION");
-            _material.SetFloat("_EmissionEnabled", 1.0f);
             if (_material.GetColor("_EmissionColor") != _emissionColor)
             {
                 _material.SetColor("_EmissionColor", _emissionColor);
@@ -105,83 +122,79 @@ public class ItemBehavior : MonoBehaviour
             ExamineEvent.examineButton.gameObject.SetActive(isSelected);
             ExamineEvent.ChangeColor(isSelected);
             SelectionExitButtonBehavior.EnableButton();
+            GameManager.ViewPlanes(isSelected);
             Debug.Log("*** Selecting");
         }
         else
         {
-            _selectedObject = null;
             if (isExamined)
             {
                 isExamined = isSelected;
                 ExamineObject();
             }
             ExamineEvent.examineButton.gameObject.SetActive(isSelected);
+            GameManager.ViewPlanes(isSelected);
             _material.SetColor("_EmissionColor", Color.black);
             ItemBehavior.isSelected = isSelected;
-            _material.DisableKeyword("_EMISSION");
+            _selectedObject = null;
             Debug.Log("*** Deselecting ");
         }
     }
 
     public void ExamineObject()
     {
-        if (!isExamined && isSelected)
+        if (!isExamined && isSelected && _selectedObject != null)
         {
-            try
-            {
-                _originalPosition = _selectedObject.transform.position;
-                _originalRotation = _selectedObject.transform.rotation;
-                _originalScale = _selectedObject.transform.localScale;
-                _selectedObject.transform.parent = _examineTarget.transform;
-                _selectedObject.transform.localPosition = Vector3.zero;
-                _selectedObject.transform.localScale = _initialScale * _examineScaleOffset;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("***** " + e.Source + "\n" + e.Message + " \n" + e.StackTrace);
-            }
+            _originalPosition = _selectedObject.transform.position;
+            _originalRotation = _selectedObject.transform.rotation;
+            _originalScale = _selectedObject.transform.localScale;
+            _selectedObject.transform.parent = _examineTarget.transform;
+            _selectedObject.transform.localPosition = Vector3.zero;
+            _selectedObject.transform.localScale = _initialScale * _examineScaleOffset;
             ExamineEvent.ChangeColor(false);
             isExamined = true;
             Debug.Log("*** Examining");
         }
         else
         {
-            GameManager.ViewPlanes(true);
             _selectedObject.transform.position = _originalPosition;
             _selectedObject.transform.localScale = _originalScale;
             _selectedObject.transform.rotation = _originalRotation;
             _selectedObject.transform.parent = _placementParent.transform;
-            GameManager.ViewPlanes(false);
-            _originalPosition = Vector3.zero;
-            _originalRotation = Quaternion.identity;
-            _originalScale = Vector3.zero;
             isExamined = false;
             ExamineEvent.ChangeColor(true);
             Debug.Log("*** Unexamining");
         }
     }
 
-    private void HandleScalingAndRotation()
+    private void HandleMoveAndRotation()
     {
         Vector3 scaleNow = Vector3.one;
-
         if (Input.touchCount == 1)
         {
             Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began)
+            switch (touch.phase)
             {
-                _lastTouchPosition = touch.position;
-                _isRotating = true;
-            }
-            else if (touch.phase == TouchPhase.Moved && _isRotating)
-            {
-                Vector2 delta = touch.position - _lastTouchPosition;
-                _selectedObject.transform.Rotate(Vector3.up, -delta.x * _rotationSpeed, Space.World);
-                _lastTouchPosition = touch.position;
-            }
-            else if (touch.phase == TouchPhase.Ended)
-            {
-                _isRotating = false;
+                case TouchPhase.Began:
+                    startTouchPosition = touch.position;
+                    isDragging = _selectedObject != null;
+                    break;
+
+                case TouchPhase.Moved:
+                    if (isDragging && _selectedObject != null)
+                    {
+                        currentTouchPosition = touch.position;
+                        if (_raycastManager.Raycast(touch.position, hits, TrackableType.PlaneWithinPolygon))
+                        {
+                            Pose hitPose = hits[0].pose;
+                            _selectedObject.transform.position = hitPose.position;
+                        }
+                    }
+                    break;
+
+                case TouchPhase.Ended:
+                    isDragging = false;
+                    break;
             }
         }
 
